@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>镁冶炼成本对标看板</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft YaHei', 'SimHei', 'PingFang SC', sans-serif;
+  background: #f0f2f5; color: #333; min-height: 100vh; }
+.container { width: 100%; max-width: 900px; padding: 20px 16px; margin: 0 auto; }
+
+h1 { text-align: center; color: #1a5276; font-size: 22px; margin-bottom: 4px; }
+.subtitle { text-align: center; color: #7f8c8d; font-size: 13px; margin-bottom: 18px; }
+
+/* Toggle buttons */
+.toggle-row { display: flex; gap: 10px; margin-bottom: 22px; justify-content: center;
+  flex-wrap: wrap; }
+.toggle-btn { flex: 1; min-width: 100px; max-width: 220px; padding: 14px 12px;
+  border: 2px solid #d5dbdb; border-radius: 12px; background: #fff; cursor: pointer;
+  text-align: center; transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent; }
+.toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.toggle-btn .btn-title { font-size: 14px; font-weight: bold; display: block; margin-bottom: 3px; }
+.toggle-btn .btn-cost { font-size: 20px; font-weight: bold; display: block; }
+.toggle-btn .btn-tag { font-size: 11px; color: #7f8c8d; margin-top: 2px; }
+.toggle-btn.active { border-color: #2980b9; background: #eaf2f8; }
+.toggle-btn.active .btn-title { color: #1a5276; }
+.toggle-btn.active .btn-cost { color: #1a5276; }
+.toggle-btn.savings { border-color: #27ae60; }
+.toggle-btn.savings .btn-cost { color: #27ae60; }
+.toggle-btn.savings.active { background: #eafaf1; border-color: #27ae60; }
+
+/* Metric cards */
+.metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.metric-card { background: #fff; border-radius: 12px; padding: 18px 12px; text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+.metric-card .m-val { font-size: 26px; font-weight: bold; transition: all 0.45s ease; }
+.metric-card .m-val.cost { color: #1a5276; }
+.metric-card .m-val.save { color: #27ae60; }
+.metric-card .m-val.annual { color: #c0392b; }
+.metric-card .m-label { font-size: 11px; color: #7f8c8d; margin-top: 3px; }
+
+/* Chart area */
+.chart-card { background: #fff; border-radius: 12px; padding: 20px 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 16px; overflow: hidden; }
+.chart-title { font-size: 15px; font-weight: bold; color: #1a5276; margin-bottom: 14px; }
+
+/* Horizontal bar chart */
+.bar-row { display: flex; align-items: center; margin-bottom: 10px; }
+.bar-label { width: 80px; font-size: 12px; font-weight: bold; color: #555; text-align: right;
+  padding-right: 10px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 24px; background: #eef1f5; border-radius: 5px; position: relative;
+  overflow: hidden; min-width: 40px; }
+.bar-fill { height: 100%; border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.bar-fill.blue { background: linear-gradient(90deg, #2980b9, #3498db); }
+.bar-fill.green { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+.bar-fill.orange { background: linear-gradient(90deg, #e67e22, #f39c12); }
+.bar-fill.purple { background: linear-gradient(90deg, #8e44ad, #9b59b6); }
+.bar-fill.red { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+.bar-val { width: 70px; font-size: 12px; font-weight: bold; color: #333; padding-left: 8px;
+  flex-shrink: 0; text-align: left; transition: all 0.45s ease; }
+.bar-pct { width: 48px; font-size: 11px; color: #7f8c8d; text-align: right; flex-shrink: 0;
+  transition: all 0.45s ease; }
+.arrow { display: inline-block; margin-left: 4px; font-size: 14px; font-weight: bold;
+  animation: arrowPop 0.4s ease-out 0.55s both; }
+.arrow.down { color: #27ae60; }
+.arrow.up { color: #c0392b; }
+@keyframes arrowPop {
+  0% { opacity: 0; transform: translateY(6px); }
+  60% { opacity: 1; transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.sub-text { font-size: 11px; color: #95a5a6; margin: -4px 0 6px 90px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Bottom metrics strip */
+.metrics-strip { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px;
+  padding: 12px 14px; background: #f8f9f9; border-radius: 10px;
+  font-size: 11px; color: #555; line-height: 1.8; }
+.metrics-strip span { white-space: nowrap; }
+.metrics-strip .m-key { color: #1a5276; font-weight: bold; }
+
+/* KPI table - scrollable wrapper */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -18px;
+  padding: 0 18px; }
+.table-wrap table { min-width: 500px; }
+
+/* ---- Mobile (< 600px) ---- */
+@media (max-width: 600px) {
+  .container { padding: 14px 10px; }
+  h1 { font-size: 19px; }
+  .subtitle { font-size: 12px; margin-bottom: 14px; }
+
+  .toggle-row { gap: 8px; margin-bottom: 16px; }
+  .toggle-btn { padding: 10px 8px; border-radius: 10px; border-width: 2px; }
+  .toggle-btn .btn-title { font-size: 12px; }
+  .toggle-btn .btn-cost { font-size: 17px; }
+  .toggle-btn .btn-tag { font-size: 10px; }
+
+  .metric-row { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .metric-card { padding: 14px 8px; border-radius: 10px; }
+  .metric-card .m-val { font-size: 20px; }
+  .metric-card .m-label { font-size: 10px; }
+
+  .chart-card { padding: 14px 12px; border-radius: 10px; margin-bottom: 12px; }
+  .chart-title { font-size: 14px; margin-bottom: 10px; }
+
+  .bar-label { width: 64px; font-size: 11px; padding-right: 6px; }
+  .bar-track { height: 20px; }
+  .bar-val { width: 58px; font-size: 11px; padding-left: 6px; }
+  .bar-pct { width: 42px; font-size: 10px; }
+  .sub-text { margin-left: 70px; font-size: 10px; }
+
+  .metrics-strip { font-size: 10px; gap: 4px 12px; padding: 10px 12px; line-height: 1.7; }
+  .metrics-strip span { font-size: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>镁冶炼吨镁成本对标看板</h1>
+<p class="subtitle">垣曲县五龙镁业有限责任公司</p>
+
+<div class="toggle-row">
+  <button class="toggle-btn active" onclick="switchTo('current')" id="btn-current">
+    <span class="btn-title">当前水平</span>
+    <span class="btn-cost">16,711</span>
+    <span class="btn-tag">元/吨镁</span>
+  </button>
+  <button class="toggle-btn savings" onclick="switchTo('average')" id="btn-average">
+    <span class="btn-title">行业平均</span>
+    <span class="btn-cost">13,421</span>
+    <span class="btn-tag">节约 3,291 元/吨</span>
+  </button>
+  <button class="toggle-btn savings" onclick="switchTo('excellent')" id="btn-excellent">
+    <span class="btn-title">行业优秀</span>
+    <span class="btn-cost">12,640</span>
+    <span class="btn-tag">节约 4,072 元/吨</span>
+  </button>
+</div>
+
+<div class="metric-row">
+  <div class="metric-card">
+    <div class="m-val cost" id="m-total">16,711</div>
+    <div class="m-label">吨镁总成本（元/吨）</div>
+  </div>
+  <div class="metric-card">
+    <div class="m-val save" id="m-save">—</div>
+    <div class="m-label">累计节约（元/吨）</div>
+  </div>
+  <div class="metric-card">
+    <div class="m-val annual" id="m-annual">—</div>
+    <div class="m-label">年效益·6万吨（亿元）</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">成本科目构成</div>
+  <div id="bars-container"></div>
+  <div class="metrics-strip" id="metrics-strip"></div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">关键指标对标</div>
+  <div class="table-wrap"><div id="kpi-table"></div></div>
+</div>
+</div>
+
+<script>
+// Data for three levels
+var DATA = {
+  current: {
+    total: 16711.46, savings: 0,
+    cats: [
+      {name:'材料费', cost:8674.35, color:'blue', subs:[
+        {name:'75#硅铁', cost:6755.42},{name:'还原罐', cost:963.30},
+        {name:'萤石粉', cost:287.02},{name:'白云石', cost:259.20},
+        {name:'氯化镁', cost:221.48},{name:'二号溶剂', cost:131.22},
+        {name:'精炼锅', cost:56.72}
+      ]},
+      {name:'直接动力费', cost:4449.04, color:'orange', subs:[
+        {name:'煤气', cost:3768.37},{name:'电', cost:680.67}
+      ]},
+      {name:'直接人工费', cost:2181.63, color:'purple', subs:[]},
+      {name:'制造费用', cost:804.42, color:'red', subs:[{name:'安全经费', cost:103.96}]},
+      {name:'备品备件', cost:498.05, color:'#95a5a6', subs:[]},
+    ],
+    kpis: {料镁比:'6.82',罐耗:'0.37',硅耗:'1.15',回收率:'91%',炉时:'14h',
+           煤气:'7,537 m³/t',白云石:'11.0 t/t',综合能耗:'4,596 kgce/t'}
+  },
+  average: {
+    total: 13420.72, savings: 3290.74,
+    cats: [
+      {name:'材料费', cost:7571.24, color:'blue', subs:[
+        {name:'75#硅铁', cost:6167.99},{name:'还原罐', cost:520.00},
+        {name:'萤石粉', cost:265.13},{name:'白云石', cost:239.93},
+        {name:'氯化镁', cost:204.59},{name:'二号溶剂', cost:121.21},
+        {name:'精炼锅', cost:52.39}
+      ]},
+      {name:'直接动力费', cost:3128.78, color:'orange', subs:[
+        {name:'煤气', cost:2500.00},{name:'电', cost:628.78}
+      ]},
+      {name:'直接人工费', cost:2015.28, color:'purple', subs:[]},
+      {name:'制造费用', cost:743.09, color:'red', subs:[{name:'安全经费', cost:96.03}]},
+      {name:'备品备件', cost:460.08, color:'#95a5a6', subs:[]},
+    ],
+    kpis: {料镁比:'6.30',罐耗:'0.20',硅耗:'1.05',回收率:'97%',炉时:'12h',
+           煤气:'5,000 m³/t',白云石:'10.18 t/t',综合能耗:'3,127 kgce/t'}
+  },
+  excellent: {
+    total: 12639.72, savings: 4071.74,
+    cats: [
+      {name:'材料费', cost:7148.93, color:'blue', subs:[
+        {name:'75#硅铁', cost:5933.02},{name:'还原罐', cost:390.00},
+        {name:'萤石粉', cost:248.31},{name:'白云石', cost:223.42},
+        {name:'氯化镁', cost:191.63},{name:'二号溶剂', cost:113.53},
+        {name:'精炼锅', cost:49.07}
+      ]},
+      {name:'直接动力费', cost:2838.85, color:'orange', subs:[
+        {name:'煤气', cost:2250.00},{name:'电', cost:588.85}
+      ]},
+      {name:'直接人工费', cost:1887.33, color:'purple', subs:[]},
+      {name:'制造费用', cost:695.91, color:'red', subs:[{name:'安全经费', cost:89.94}]},
+      {name:'备品备件', cost:430.87, color:'#95a5a6', subs:[]},
+    ],
+    kpis: {料镁比:'5.90',罐耗:'0.15',硅耗:'1.01',回收率:'98%',炉时:'11.5h',
+           煤气:'4,500 m³/t',白云石:'9.48 t/t',综合能耗:'2,837 kgce/t'}
+  }
+};
+
+var currentLevel = 'current';
+var prevLevel = 'current';
+var animFrame = null;
+
+function fmt(n) { return Math.round(n).toLocaleString('zh-CN'); }
+
+function switchTo(level) {
+  if (level === currentLevel) return;
+  prevLevel = currentLevel;
+  currentLevel = level;
+  document.querySelectorAll('.toggle-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('btn-' + level).classList.add('active');
+  render(level);
+}
+
+function animateValue(el, from, to, suffix) {
+  var dur = 500, start = performance.now();
+  function step(ts) {
+    var p = Math.min((ts - start) / dur, 1);
+    var e = p < 0.5 ? 2*p*p : -1+(4-2*p)*p; // easeInOutQuad
+    var v = from + (to - from) * e;
+    el.textContent = (suffix ? fmt(v) : v.toFixed(2)) + (suffix || '');
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function render(level) {
+  var d = DATA[level];
+  var pdata = DATA[prevLevel];
+
+  // Big numbers with animation
+  var elT = document.getElementById('m-total');
+  var elS = document.getElementById('m-save');
+  var elA = document.getElementById('m-annual');
+  var oldT = parseFloat(elT.textContent.replace(/,/g,'')) || d.total;
+  var oldS = parseFloat(elS.textContent.replace(/,/g,'').replace('—','0')) || 0;
+  var oldA = parseFloat(elA.textContent.replace(/,/g,'').replace('—','0')) || 0;
+  animateValue(elT, oldT, d.total, '');
+  if (d.savings > 0) {
+    animateValue(elS, oldS, d.savings, '');
+    elS.style.color = '#27ae60';
+  } else {
+    elS.textContent = '—'; elS.style.color = '#27ae60';
+  }
+  animateValue(elA, oldA, d.savings * 6 / 10000, '');
+  if (d.savings === 0) elA.textContent = '—';
+
+  // Bars
+  var maxCost = 0;
+  for (var i = 0; i < d.cats.length; i++) { maxCost = Math.max(maxCost, d.cats[i].cost); }
+  var html = '';
+  for (var i = 0; i < d.cats.length; i++) {
+    var cat = d.cats[i];
+    var pct = cat.cost / d.total * 100;
+    var subList = '';
+    for (var j = 0; j < cat.subs.length; j++) {
+      subList += '<span style="opacity:0.85">' + cat.subs[j].name + ' ' + fmt(cat.subs[j].cost) + '</span>  ';
+    }
+    // Compare with previous level
+    var prevCat = null;
+    for (var k = 0; k < pdata.cats.length; k++) {
+      if (pdata.cats[k].name === cat.name) { prevCat = pdata.cats[k]; break; }
+    }
+    var arrow = '';
+    if (prevCat && Math.abs(cat.cost - prevCat.cost) > 1) {
+      var down = cat.cost < prevCat.cost;
+      arrow = '<span class="arrow ' + (down ? 'down' : 'up') + '">' + (down ? '↓' : '↑') + '</span>';
+    }
+
+    html += '<div class="bar-row">' +
+      '<div class="bar-label">' + cat.name + '</div>' +
+      '<div class="bar-track"><div class="bar-fill ' + (cat.color === '#95a5a6' ? '' : cat.color) +
+      '" style="width:' + (cat.cost / maxCost * 100) + '%;' +
+      (cat.color === '#95a5a6' ? 'background:linear-gradient(90deg,#95a5a6,#bdc3c7);' : '') +
+      '"></div></div>' +
+      '<div class="bar-val">' + fmt(cat.cost) + arrow + '</div>' +
+      '<div class="bar-pct">' + pct.toFixed(1) + '%</div></div>';
+    if (cat.subs.length > 0) {
+      html += '<div class="sub-text">' + subList + '</div>';
+    }
+  }
+  // Total bar
+  html += '<div class="bar-row" style="margin-top:6px;border-top:1px solid #e5e7e9;padding-top:10px">' +
+    '<div class="bar-label" style="color:#1a5276">吨镁总成本</div>' +
+    '<div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#1a5276,#2980b9)"></div></div>' +
+    '<div class="bar-val" style="color:#1a5276;font-size:15px">' + fmt(d.total) + '</div>' +
+    '<div class="bar-pct">100%</div></div>';
+
+  document.getElementById('bars-container').innerHTML = html;
+
+  // Metrics strip
+  var k = d.kpis;
+  document.getElementById('metrics-strip').innerHTML =
+    '<span><span class="m-key">料镁比</span> ' + k['料镁比'] + '</span>' +
+    '<span><span class="m-key">罐耗</span> ' + k['罐耗'] + ' 支/t</span>' +
+    '<span><span class="m-key">硅耗</span> ' + k['硅耗'] + ' t/t</span>' +
+    '<span><span class="m-key">回收率</span> ' + k['回收率'] + '</span>' +
+    '<span><span class="m-key">炉时</span> ' + k['炉时'] + '</span>' +
+    '<span><span class="m-key">煤气</span> ' + k['煤气'] + '</span>' +
+    '<span><span class="m-key">白云石</span> ' + k['白云石'] + '</span>' +
+    '<span><span class="m-key">综合能耗</span> ' + k['综合能耗'] + '</span>';
+
+  // KPI comparison table
+  var levels = ['current','average','excellent'];
+  var kpiRows = [
+    {label:'料镁比', key:'料镁比'},
+    {label:'罐耗（支/吨）', key:'罐耗'},
+    {label:'硅耗（吨/吨）', key:'硅耗'},
+    {label:'精炼回收率', key:'回收率'},
+    {label:'还原炉时（h）', key:'炉时'},
+    {label:'煤气单耗（m³/t）', key:'煤气'},
+    {label:'白云石单耗（t/t）', key:'白云石'},
+    {label:'综合能耗（kgce/t）', key:'综合能耗'},
+  ];
+  var tbl = '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+    '<tr style="background:#1a5276;color:#fff">' +
+    '<th style="padding:10px;text-align:left">指标</th>' +
+    '<th style="padding:10px">当前</th><th style="padding:10px">行业平均</th><th style="padding:10px">行业优秀</th></tr>';
+  for (var i = 0; i < kpiRows.length; i++) {
+    var r = kpiRows[i];
+    tbl += '<tr style="' + (i%2===0?'background:#f8f9f9':'') + '">' +
+      '<td style="padding:9px 10px;font-weight:bold;color:#1a5276">' + r.label + '</td>';
+    for (var j = 0; j < 3; j++) {
+      var lv = levels[j];
+      var val = DATA[lv].kpis[r.key];
+      var isActive = lv === level;
+      tbl += '<td style="padding:9px;text-align:center;' +
+        (isActive ? 'background:#eaf2f8;font-weight:bold;color:#1a5276;border-radius:4px' : '') + '">' + val + '</td>';
+    }
+    tbl += '</tr>';
+  }
+  tbl += '<tr style="font-weight:bold;background:#d5dbdb">' +
+    '<td style="padding:10px;color:#1a5276">吨镁成本（元/t）</td>' +
+    '<td style="padding:10px;text-align:center;' + (level==='current'?'background:#eaf2f8;':'') + '">16,711</td>' +
+    '<td style="padding:10px;text-align:center;' + (level==='average'?'background:#eaf2f8;':'') + '">13,421</td>' +
+    '<td style="padding:10px;text-align:center;' + (level==='excellent'?'background:#eaf2f8;':'') + '">12,640</td></tr>';
+  tbl += '</table>';
+  document.getElementById('kpi-table').innerHTML = tbl;
+}
+
+// Init
+render('current');
+</script>
+</body>
+</html>
