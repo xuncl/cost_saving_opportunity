@@ -93,6 +93,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 .kpi-table .change.worse { color: var(--red); }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
+/* Detail section */
+.detail-wrap { margin-top: 20px; text-align: center; }
+.detail-toggle { display: inline-block; padding: 10px 28px; border: 2px solid var(--border);
+  border-radius: 30px; background: var(--card); color: var(--blue); font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: all .2s; -webkit-tap-highlight-color: transparent; }
+.detail-toggle:hover { border-color: var(--blue); background: #eff6ff; }
+.detail-toggle .arrow-icon { display: inline-block; transition: transform .3s; margin-left: 4px; }
+.detail-toggle.open .arrow-icon { transform: rotate(180deg); }
+.detail-body { max-height: 0; overflow: hidden; transition: max-height .5s ease, margin .3s ease;
+  margin-top: 0; }
+.detail-body.expanded { max-height: 2000px; margin-top: 20px; }
+.detail-content { background: var(--card); border-radius: var(--radius); padding: 24px 28px;
+  border: 1px solid var(--border); text-align: left; }
+.detail-content h3 { font-size: 16px; font-weight: 700; color: var(--text); margin: 16px 0 8px; }
+.detail-content h3:first-child { margin-top: 0; }
+.detail-content p { font-size: 13px; color: var(--muted); line-height: 1.8; margin-bottom: 8px; }
+.detail-content .highlight-num { font-weight: 700; color: var(--blue); }
+.back-top { display: inline-block; margin-top: 14px; padding: 8px 22px; border: 2px solid var(--blue);
+  border-radius: 20px; background: var(--blue); color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s; }
+.back-top:hover { background: #1d4ed8; border-color: #1d4ed8; }
+
 @media (max-width: 640px) {
   .container { padding: 16px 10px; }
   .header h1 { font-size: 20px; }
@@ -119,7 +141,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 
 <div class="header">
   <h1>镁冶炼吨镁成本对标看板</h1>
-  <p>垣曲县五龙镁业有限责任公司</p>
+  <p>运城旭阳志昊能源有限公司</p>
 </div>
 
 <div class="toggle-row">
@@ -336,6 +358,59 @@ function render(lv){
 }
 
 render('current');
+
+function toggleDetail(){
+  var body=document.getElementById('detailBody');
+  var btn=document.getElementById('detailBtn');
+  var expanded=body.classList.contains('expanded');
+  if(expanded){body.classList.remove('expanded');btn.classList.remove('open');}
+  else{body.classList.add('expanded');btn.classList.add('open');
+    document.getElementById('detailBody').scrollIntoView({behavior:'smooth'});}
+}
+function backToTop(){
+  document.getElementById('detailBody').classList.remove('expanded');
+  document.getElementById('detailBtn').classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 </script>
+<div class="detail-wrap">
+  <button class="detail-toggle" id="detailBtn" onclick="toggleDetail()">
+    了解项目背景 <span class="arrow-icon">▼</span>
+  </button>
+  <div class="detail-body" id="detailBody">
+    <div class="detail-content">
+      <h3>关于本项目</h3>
+      <p>本看板展示运城旭阳志昊能源有限公司镁冶炼业务的吨镁成本结构与行业对标分析。
+      公司具备年产焦炭 110 万吨、金属镁 6 万吨的产能，采用<strong>焦炉煤气炼镁</strong>工艺——
+      利用焦化副产的焦炉煤气作为镁冶炼的热源和还原气氛，实现资源循环利用，降低能源成本。</p>
+      <h3>镁冶炼工艺流程</h3>
+      <p>镁冶炼分为四个工段：（1）<strong>煅烧</strong>——白云石经高温煅烧分解为煅白（氧化镁）；
+      （2）<strong>制球</strong>——煅白与 75# 硅铁（还原剂）、萤石粉（熔剂）按比例混合压制成料球；
+      （3）<strong>还原</strong>——料球装入还原罐，在高温真空条件下还原为粗镁；
+      （4）<strong>精炼</strong>——粗镁经熔剂精炼除去杂质，铸成纯度 99.9% 以上的镁锭。</p>
+      <h3>对标说明</h3>
+      <p>当前吨镁生产成本约 <span class="highlight-num">16,711 元/吨</span>。
+      通过与行业先进水平对标，识别出七项降本举措：精炼回收率提升（91%→97%）、
+      硅铁消耗降低（1.15→1.05 吨/吨）、还原罐消耗降低（0.37→0.20 支/吨）、
+      还原炉时缩短（14→12h）、料镁比降低（6.82→6.3）、煤气综合节能（→5,000 m³/t）等。
+      全部落实后吨镁成本可降至 <span class="highlight-num">13,421 元/吨</span>（行业平均）
+      或 <span class="highlight-num">12,640 元/吨</span>（行业优秀），
+      累计节约分别达 <span class="highlight-num">3,291 元/吨</span> 和 <span class="highlight-num">4,072 元/吨</span>。
+      按年产 6 万吨精镁计算，年化效益分别约 <span class="highlight-num">1.97 亿元</span> 和 <span class="highlight-num">2.44 亿元</span>。</p>
+      <h3>参数说明</h3>
+      <p><strong>料镁比</strong>：生产 1 吨精镁所需料球吨数（料球 = 煅白 + 硅铁 + 萤石粉）。<br>
+      <strong>罐耗</strong>：每吨精镁消耗的还原罐数量，单价 2,600 元/支。<br>
+      <strong>硅耗</strong>：每吨精镁消耗的 75# 硅铁吨数，单价约 5,874 元/吨。<br>
+      <strong>回收率</strong>：精炼车间将粗镁提纯为精镁的收得率。<br>
+      <strong>炉时</strong>：还原车间每炉作业时间，时间越短煤气消耗越低。<br>
+      <strong>煤气单耗</strong>：每吨精镁消耗的焦炉煤气量，内部结算价 0.5 元/m³。</p>
+      <h3>数据来源</h3>
+      <p>基于 2026 年 1-4 月实际成本数据及行业公开对标数据测算。具体实施方案需结合工艺改造和设备投资另行评估。</p>
+      <div style="text-align:center">
+        <button class="back-top" onclick="backToTop()">↑ 收起并回到顶部</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
